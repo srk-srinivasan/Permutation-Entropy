@@ -1,2 +1,2 @@
 # Permutation-Entropy
-Python Codes for Computing Permutation Entropy and Jensen-Shannon Complexity
+Python and R Codes for Computing Permutation Entropy and Jensen-Shannon Complexity
