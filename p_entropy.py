@@ -5,7 +5,7 @@ import itertools
 import numpy as np
 import pandas as pd
 from scipy.spatial.distance import euclidean
-from scipy.stats import kurtosis
+
 
 def s_entropy(freq_list):
     ''' This function computes the shannon entropy of a given frequency distribution.
@@ -83,21 +83,4 @@ def weighted_ordinal_patterns(ts, embdim, embdelay):
         wop.append(np.sum(result.loc[result['pattern']==pat,'weights'].values))
     return(wop)
 
-def kweighted(ts, embdim, embdelay):
-    time_series = ts
-    possible_permutations = list(itertools.permutations(range(embdim)))
-    temp_list = list()
-    wop = list()
-    for i in range(len(time_series) - embdelay * (embdim - 1)):
-        Xi = time_series[i:(embdim+i)]
-        Xn = time_series[(i+embdim-1): (i+embdim+embdim-1)]
-        Xi_mean = np.mean(Xi)
-        Xi_var = (Xi-Xi_mean)**2
-        weight = kurtosis(Xi)
-        sorted_index_array = list(np.argsort(Xi))
-        temp_list.append([''.join(map(str, sorted_index_array)), weight])
-    result = pd.DataFrame(temp_list,columns=['pattern','weights'])
-    freqlst = dict(result['pattern'].value_counts())
-    for pat in (result['pattern'].unique()):
-        wop.append(np.sum(result.loc[result['pattern']==pat,'weights'].values))
-    return(wop)
+
