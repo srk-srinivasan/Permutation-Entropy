@@ -10,7 +10,7 @@ from scipy.spatial.distance import euclidean
 def s_entropy(freq_list):
     ''' This function computes the shannon entropy of a given frequency distribution.
     USAGE: shannon_entropy(freq_list)
-    ARGS: freq_list = Numeric vector represnting the frequency distribution
+    ARGS: freq_list = Numeric vector representing the frequency distribution
     OUTPUT: A numeric value representing shannon's entropy'''
     freq_list = [element for element in freq_list if element != 0]
     sh_entropy = 0.0
@@ -22,7 +22,7 @@ def s_entropy(freq_list):
 def ordinal_patterns(ts, embdim, embdelay):
     ''' This function computes the ordinal patterns of a time series for a given embedding dimension and embedding delay.
     USAGE: ordinal_patterns(ts, embdim, embdelay)
-    ARGS: ts = Numeric vector represnting the time series, embdim = embedding dimension (3<=embdim<=7 prefered range), embdelay =  embdding delay
+    ARGS: ts = Numeric vector representing the time series, embdim = embedding dimension (3<=embdim<=7 prefered range), embdelay =  embdding delay
     OUPTUT: A numeric vector representing frequencies of ordinal patterns'''
     time_series = ts
     possible_permutations = list(itertools.permutations(range(embdim)))
