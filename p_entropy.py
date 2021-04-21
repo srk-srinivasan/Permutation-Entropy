@@ -4,7 +4,6 @@ its different variations.'''
 import itertools
 import numpy as np
 import pandas as pd
-from scipy.spatial.distance import euclidean
 
 
 def s_entropy(freq_list):
@@ -24,21 +23,27 @@ def ordinal_patterns(ts, embdim, embdelay):
     USAGE: ordinal_patterns(ts, embdim, embdelay)
     ARGS: ts = Numeric vector representing the time series, embdim = embedding dimension (3<=embdim<=7 prefered range), embdelay =  embdding delay
     OUPTUT: A numeric vector representing frequencies of ordinal patterns'''
-    time_series = ts
-    possible_permutations = list(itertools.permutations(range(embdim)))
-    lst = list()
-    for i in range(len(time_series) - embdelay * (embdim - 1)):
-        sorted_index_array = list(np.argsort(time_series[i:(embdim+i)]))
-        lst.append(sorted_index_array)
-    lst = np.array(lst)
-    element, freq = np.unique(lst, return_counts = True, axis = 0)
-    freq = list(freq)
-    if len(freq) != len(possible_permutations):
-        for i in range(len(possible_permutations)-len(freq)):
-            freq.append(0)
-        return(freq)
-    else:
-        return(freq)
+    m, t = embdim, embdelay
+    x = ts if isinstance(ts, np.ndarray) else np.array(ts) 
+
+    tmp = np.zeros((x.shape[0], m))
+    for i in range(m):
+        tmp[:, i] = np.roll(x, i*t)
+    partition = tmp[(t*m-1):, :] 
+    permutation = np.argsort(partition)
+    idx = _hash(permutation)
+
+    counts = np.zeros(np.math.factorial(m))
+    for i in range(counts.shape[0]):
+        counts[i] = (idx == i).sum()
+    return list(counts[counts != 0])
+
+def _hash(x):
+    m, n = x.shape
+    if n == 1:
+        return np.zeros(m)
+    return np.sum(np.apply_along_axis(lambda y: y < x[:, 0], 0, x), axis=1) * np.math.factorial(n-1) + _hash(x[:, 1:]) 
+    
 
 def p_entropy(op):
     ordinal_pat = op
