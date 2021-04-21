@@ -1,9 +1,7 @@
 ''' This module has essential functions supporting
 fast and effective computation of permutation entropy and
 its different variations.'''
-import itertools
 import numpy as np
-import pandas as pd
 
 
 def s_entropy(freq_list):
@@ -36,7 +34,7 @@ def ordinal_patterns(ts, embdim, embdelay):
     counts = np.zeros(np.math.factorial(m))
     for i in range(counts.shape[0]):
         counts[i] = (idx == i).sum()
-    return list(counts[counts != 0])
+    return list(counts[counts != 0].astype(int))
 
 def _hash(x):
     m, n = x.shape
@@ -70,22 +68,19 @@ def complexity(op):
     return(Comp_JS)
 
 def weighted_ordinal_patterns(ts, embdim, embdelay):
-    time_series = ts
-    possible_permutations = list(itertools.permutations(range(embdim)))
-    temp_list = list()
-    wop = list()
-    for i in range(len(time_series) - embdelay * (embdim - 1)):
-        Xi = time_series[i:(embdim+i)]
-        Xn = time_series[(i+embdim-1): (i+embdim+embdim-1)]
-        Xi_mean = np.mean(Xi)
-        Xi_var = (Xi-Xi_mean)**2
-        weight = np.mean(Xi_var)
-        sorted_index_array = list(np.argsort(Xi))
-        temp_list.append([''.join(map(str, sorted_index_array)), weight])
-    result = pd.DataFrame(temp_list,columns=['pattern','weights'])
-    freqlst = dict(result['pattern'].value_counts())
-    for pat in (result['pattern'].unique()):
-        wop.append(np.sum(result.loc[result['pattern']==pat,'weights'].values))
-    return(wop)
+    m, t = embdim, embdelay
+    x = ts if isinstance(ts, np.ndarray) else np.array(ts) 
 
+    tmp = np.zeros((x.shape[0], m))
+    for i in range(m):
+        tmp[:, i] = np.roll(x, i*t)
+    partition = tmp[(t*m-1):, :] 
+    xm = np.mean(partition, axis=1)
+    weight = np.mean((partition - xm[:, None])**2, axis=1)
+    permutation = np.argsort(partition)
+    idx = _hash(permutation)
+    counts = np.zeros(np.math.factorial(m))
+    for i in range(counts.shape[0]):
+        counts[i] = sum(weight[i == idx])
 
+    return list(counts[counts != 0]) 
