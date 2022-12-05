@@ -27,7 +27,7 @@ def ordinal_patterns(ts, embdim, embdelay):
     tmp = np.zeros((x.shape[0], m))
     for i in range(m):
         tmp[:, i] = np.roll(x, i*t)
-    partition = tmp[(t*m-1):, :] 
+    partition = tmp[(t*(m-1)):, :] 
     permutation = np.argsort(partition)
     idx = _hash(permutation)
 
@@ -74,7 +74,7 @@ def weighted_ordinal_patterns(ts, embdim, embdelay):
     tmp = np.zeros((x.shape[0], m))
     for i in range(m):
         tmp[:, i] = np.roll(x, i*t)
-    partition = tmp[(t*m-1):, :] 
+    partition = tmp[(t*(m-1)):, :] 
     xm = np.mean(partition, axis=1)
     weight = np.mean((partition - xm[:, None])**2, axis=1)
     permutation = np.argsort(partition)
