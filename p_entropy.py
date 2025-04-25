@@ -1,86 +1,61 @@
 ''' This module has essential functions supporting
-fast and effective computation of permutation entropy and
-its different variations.'''
+fast and effective computation of permutation entropy'''
 import numpy as np
+import math
+import itertools
 
-
-def s_entropy(freq_list):
-    ''' This function computes the shannon entropy of a given frequency distribution.
-    USAGE: shannon_entropy(freq_list)
-    ARGS: freq_list = Numeric vector representing the frequency distribution
-    OUTPUT: A numeric value representing shannon's entropy'''
-    freq_list = [element for element in freq_list if element != 0]
-    sh_entropy = 0.0
-    for freq in freq_list:
-        sh_entropy += freq * np.log(freq)
-    sh_entropy = -sh_entropy
-    return(sh_entropy)
+def s_entropy(p):
+    """Shannon entropy (base 2) for a probability distribution p."""
+    p = np.asarray(p)
+    p = p[p > 0]
+    return -np.sum(p * np.log2(p))
 
 def ordinal_patterns(ts, embdim, embdelay):
-    ''' This function computes the ordinal patterns of a time series for a given embedding dimension and embedding delay.
-    USAGE: ordinal_patterns(ts, embdim, embdelay)
-    ARGS: ts = Numeric vector representing the time series, embdim = embedding dimension (3<=embdim<=7 prefered range), embdelay =  embdding delay
-    OUPTUT: A numeric vector representing frequencies of ordinal patterns'''
+    """
+    Computes normalized frequency of all ordinal patterns.
+    Matches ordpy.ordinal_distribution behavior.
+    """
+    ts = np.asarray(ts)
     m, t = embdim, embdelay
-    x = ts if isinstance(ts, np.ndarray) else np.array(ts) 
+    n = len(ts)
+    n_patterns = math.factorial(m)
 
-    tmp = np.zeros((x.shape[0], m))
-    for i in range(m):
-        tmp[:, i] = np.roll(x, i*t)
-    partition = tmp[(t*(m-1)):, :] 
-    permutation = np.argsort(partition)
-    idx = _hash(permutation)
+    # All possible patterns in lexicographic order
+    patterns = list(itertools.permutations(range(m)))
+    pattern_index = {pat: idx for idx, pat in enumerate(patterns)}
+    counts = np.zeros(n_patterns)
 
-    counts = np.zeros(np.math.factorial(m))
-    for i in range(counts.shape[0]):
-        counts[i] = (idx == i).sum()
-    return list(counts[counts != 0].astype(int))
+    for i in range(n - (m - 1) * t):
+        window = ts[i:i + t * m:t]
+        order = tuple(np.argsort(window))
+        counts[pattern_index[order]] += 1
 
-def _hash(x):
-    m, n = x.shape
-    if n == 1:
-        return np.zeros(m)
-    return np.sum(np.apply_along_axis(lambda y: y < x[:, 0], 0, x), axis=1) * np.math.factorial(n-1) + _hash(x[:, 1:]) 
-    
+    total = np.sum(counts)
+    return counts / total if total > 0 else counts
 
-def p_entropy(op):
-    ordinal_pat = op
-    max_entropy = np.log(len(ordinal_pat))
-    p = np.divide(np.array(ordinal_pat), float(sum(ordinal_pat)))
-    return(s_entropy(p)/max_entropy)
+def permutation_entropy(ts, embdim, embdelay):
+    """
+    Returns normalized permutation entropy (log base 2).
+    Matches ordpy.permutation_entropy.
+    """
+    p = ordinal_patterns(ts, embdim, embdelay)
+    max_entropy = np.log2(len(p)) if len(p) > 0 else 0
+    return s_entropy(p) / max_entropy if max_entropy > 0 else 0.0
 
-def complexity(op):
-    ''' This function computes the complexity of a time series defined as: Comp_JS = Q_o * JSdivergence * pe
-    Q_o = Normalizing constant
-    JSdivergence = Jensen-Shannon divergence
-    pe = permutation entopry
-    ARGS: ordinal pattern'''
-    pe = p_entropy(op)
-    constant1 = (0.5+((1 - 0.5)/len(op)))* np.log(0.5+((1 - 0.5)/len(op)))
-    constant2 = ((1 - 0.5)/len(op))*np.log((1 - 0.5)/len(op))*(len(op) - 1)
-    constant3 = 0.5*np.log(len(op))
-    Q_o = -1/(constant1+constant2+constant3)
+def complexity(ts, embdim, embdelay):
+    """
+    Returns normalized statistical complexity.
+    Matches ordpy.complexity_entropy's complexity value.
+    """
+    p = ordinal_patterns(ts, embdim, embdelay)
+    pe = permutation_entropy(ts, embdim, embdelay)
 
-    temp_op_prob = np.divide(op, sum(op))
-    temp_op_prob2 = (0.5*temp_op_prob)+(0.5*(1/len(op)))
-    JSdivergence = (s_entropy(temp_op_prob2) - 0.5 * s_entropy(temp_op_prob) - 0.5 * np.log(len(op)))
-    Comp_JS = Q_o * JSdivergence * pe
-    return(Comp_JS)
+    n = len(p)
+    uniform = np.ones(n) / n
+    avg = 0.5 * (p + uniform)
 
-def weighted_ordinal_patterns(ts, embdim, embdelay):
-    m, t = embdim, embdelay
-    x = ts if isinstance(ts, np.ndarray) else np.array(ts) 
+    js_div = s_entropy(avg) - 0.5 * s_entropy(p) - 0.5 * s_entropy(uniform)
+    max_js = np.log2(n) - 0.5 * np.log2(n) - 0.5 * np.log2(n)  # max JS for uniform vs one-hot (same support)
 
-    tmp = np.zeros((x.shape[0], m))
-    for i in range(m):
-        tmp[:, i] = np.roll(x, i*t)
-    partition = tmp[(t*(m-1)):, :] 
-    xm = np.mean(partition, axis=1)
-    weight = np.mean((partition - xm[:, None])**2, axis=1)
-    permutation = np.argsort(partition)
-    idx = _hash(permutation)
-    counts = np.zeros(np.math.factorial(m))
-    for i in range(counts.shape[0]):
-        counts[i] = sum(weight[i == idx])
-
-    return list(counts[counts != 0]) 
+    normalized_js = js_div / np.log2(n) if np.log2(n) > 0 else 0
+    return normalized_js * pe
