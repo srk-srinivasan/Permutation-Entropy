@@ -1,5 +1,3 @@
-''' This module has essential functions supporting
-fast and effective computation of permutation entropy'''
 import numpy as np
 import math
 import itertools
@@ -12,8 +10,8 @@ def s_entropy(p):
 
 def ordinal_patterns(ts, embdim, embdelay):
     """
-    Computes normalized frequency of all ordinal patterns.
-    Matches ordpy.ordinal_distribution behavior.
+    Computes normalized frequency of all ordinal patterns (including zeros).
+    Based on Bandt-Pompe method.
     """
     ts = np.asarray(ts)
     m, t = embdim, embdelay
@@ -35,8 +33,8 @@ def ordinal_patterns(ts, embdim, embdelay):
 
 def permutation_entropy(ts, embdim, embdelay):
     """
-    Returns normalized permutation entropy (log base 2).
-    Matches ordpy.permutation_entropy.
+    Returns normalized permutation entropy (log base 2), using all possible patterns.
+    Matches Bandt-Pompe + Rosso et al. (2007).
     """
     p = ordinal_patterns(ts, embdim, embdelay)
     max_entropy = np.log2(len(p)) if len(p) > 0 else 0
@@ -44,8 +42,10 @@ def permutation_entropy(ts, embdim, embdelay):
 
 def complexity(ts, embdim, embdelay):
     """
-    Returns normalized statistical complexity.
-    Matches ordpy.complexity_entropy's complexity value.
+    Computes statistical complexity (Rosso et al.):
+    - Q_J: Jensen-Shannon divergence between observed and uniform over ALL patterns
+    - H_S: Normalized permutation entropy
+    - C_JS = Q_J * H_S
     """
     p = ordinal_patterns(ts, embdim, embdelay)
     pe = permutation_entropy(ts, embdim, embdelay)
@@ -55,7 +55,6 @@ def complexity(ts, embdim, embdelay):
     avg = 0.5 * (p + uniform)
 
     js_div = s_entropy(avg) - 0.5 * s_entropy(p) - 0.5 * s_entropy(uniform)
-    max_js = np.log2(n) - 0.5 * np.log2(n) - 0.5 * np.log2(n)  # max JS for uniform vs one-hot (same support)
-
     normalized_js = js_div / np.log2(n) if np.log2(n) > 0 else 0
+
     return normalized_js * pe
