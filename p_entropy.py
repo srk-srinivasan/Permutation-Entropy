@@ -55,6 +55,7 @@ def complexity(ts, embdim, embdelay):
     avg = 0.5 * (p + uniform)
 
     js_div = s_entropy(avg) - 0.5 * s_entropy(p) - 0.5 * s_entropy(uniform)
-    normalized_js = js_div / np.log2(n) if np.log2(n) > 0 else 0
+    q0 = -0.5 * ((n + 1) / n * np.log2(n + 1) - 2 * np.log2(2 * n) + np.log2(n))
+    normalized_js = js_div / q0 if q0 > 0 else 0
 
     return normalized_js * pe
